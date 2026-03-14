@@ -21,6 +21,7 @@
         
         .font-serif-custom { font-family: 'Playfair Display', serif; }
 
+        /* Khung viền vàng */
         .vintage-frame {
             border: 2px solid #D4AF37; outline: 1px solid #D4AF37; outline-offset: -6px; position: relative;
         }
@@ -99,19 +100,24 @@
     </div>
 
     <div id="result-modal" class="hidden fixed inset-0 z-[9999] bg-black/95 backdrop-blur-sm flex flex-col items-center justify-center p-4 transition-opacity">
-        <p class="text-yellow-400 text-center font-bold mb-4 text-sm sm:text-base animate-bounce">
-            👇 Nhấn giữ vào ảnh bên dưới 2 giây <br> và chọn "Lưu hình ảnh" để tải về máy! 👇
+        <p class="text-yellow-400 text-center font-bold mb-4 text-base sm:text-lg">
+            🎉 Chúc mừng bạn đã hoàn thành!
         </p>
         
-        <img id="result-image" class="max-h-[70vh] max-w-full rounded-lg shadow-2xl border-2 border-yellow-500" src="" alt="Kết quả Game">
+        <img id="result-image" class="max-h-[60vh] max-w-full rounded-lg shadow-2xl border-2 border-yellow-500" style="-webkit-touch-callout: default; pointer-events: auto; user-select: auto;" src="" alt="Kết quả Game">
         
         <p class="text-gray-400 text-center text-xs mt-3 px-6">
-            (Nếu dùng máy tính, hãy Click chuột phải -> Save image as...)
+            💡 Nhấn "Tải về máy". Nếu bị lỗi, hãy nhấn giữ vào ảnh trên 2 giây để lưu.
         </p>
 
-        <button id="close-modal-btn" class="mt-5 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-8 rounded-full shadow-lg transition-all">
-            Đóng
-        </button>
+        <div class="flex gap-3 mt-5">
+            <button id="download-final-btn" class="bg-gradient-to-r from-green-500 to-green-600 text-white font-bold py-2 px-5 rounded-full shadow-lg transition-all active:scale-95 flex items-center gap-2">
+                📥 Tải Về Máy
+            </button>
+            <button id="close-modal-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-full shadow-lg transition-all active:scale-95">
+                Đóng
+            </button>
+        </div>
     </div>
 
     <script>
@@ -136,6 +142,10 @@
         const resultModal = document.getElementById('result-modal');
         const resultImage = document.getElementById('result-image');
         const closeModalBtn = document.getElementById('close-modal-btn');
+        const downloadFinalBtn = document.getElementById('download-final-btn');
+        
+        let finalImageUrl = '';
+        let finalImageName = '';
 
         function checkGame() {
             const currentWord = Array.from(inputs).map(i => i.value).join('');
@@ -224,12 +234,15 @@
                     logging: false
                 });
 
-                // Chuyển canvas thành dạng Data URL để nhúng vào thẻ <img>
-                const imageBase64 = canvas.toDataURL('image/png');
-                
-                // Gắn nguồn ảnh cho Modal và hiển thị Modal lên
-                resultImage.src = imageBase64;
-                resultModal.classList.remove('hidden');
+                // Chuyển canvas thành Blob
+                canvas.toBlob((blob) => {
+                    finalImageUrl = URL.createObjectURL(blob);
+                    finalImageName = `UNESCO_${mssvText.textContent || 'TrangAn'}.png`;
+                    
+                    // Gắn nguồn ảnh cho Modal và hiển thị Modal lên
+                    resultImage.src = finalImageUrl;
+                    resultModal.classList.remove('hidden');
+                }, 'image/png');
 
             } catch (err) {
                 alert('Có lỗi xảy ra khi xử lý ảnh. Vui lòng thử lại!');
@@ -246,10 +259,26 @@
             }
         });
 
-        // Tắt Modal
+        // XỬ LÝ NÚT TẢI VỀ TRONG MODAL (Chuẩn cho Android & PC)
+        downloadFinalBtn.addEventListener('click', () => {
+            if (finalImageUrl) {
+                const link = document.createElement('a');
+                link.href = finalImageUrl;
+                link.download = finalImageName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        });
+
+        // Tắt Modal và dọn dẹp RAM
         closeModalBtn.addEventListener('click', () => {
             resultModal.classList.add('hidden');
-            resultImage.src = ''; // Dọn dẹp bộ nhớ
+            if (finalImageUrl) {
+                URL.revokeObjectURL(finalImageUrl); // Giải phóng bộ nhớ
+                finalImageUrl = '';
+            }
+            resultImage.src = ''; 
         });
 
         adjustScale();
