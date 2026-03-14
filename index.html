@@ -21,7 +21,6 @@
         
         .font-serif-custom { font-family: 'Playfair Display', serif; }
 
-        /* Khung viền vàng */
         .vintage-frame {
             border: 2px solid #D4AF37; outline: 1px solid #D4AF37; outline-offset: -6px; position: relative;
         }
@@ -45,7 +44,7 @@
     <div id="game-wrapper">
         <div id="game-card" class="relative w-full max-w-md aspect-[9/16] rounded-xl overflow-hidden shadow-2xl shadow-yellow-900/20 bg-[#1a1a1a]">
             
-            <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('background.jpg');"></div>
+            <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('https://upload.wikimedia.org/wikipedia/commons/3/3d/Trang_An_Landscape_Complex_Ninh_Binh_Vietnam.jpg');"></div>
             <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/80"></div>
 
             <div class="absolute inset-3 vintage-frame flex flex-col items-center justify-between p-6 text-center z-10">
@@ -89,7 +88,7 @@
                     
                     <p id="message" class="mt-1 text-xs font-bold min-h-[16px] transition-all opacity-0"></p>
 
-                    <button id="capture-btn" class="hidden mt-2 bg-gradient-to-r from-yellow-600 to-yellow-400 text-black font-bold py-2 px-6 rounded-full shadow-lg text-xs uppercase tracking-wider transition-all">📸 Tải ảnh minh chứng</button>
+                    <button id="capture-btn" class="hidden mt-2 bg-gradient-to-r from-yellow-600 to-yellow-400 text-black font-bold py-2 px-6 rounded-full shadow-lg text-xs uppercase tracking-wider transition-all">📸 Nhận ảnh minh chứng</button>
                 </div>
 
                 <div id="mssv-display" class="hidden absolute bottom-6 right-6 z-50 cursor-pointer">
@@ -99,8 +98,23 @@
         </div>
     </div>
 
+    <div id="result-modal" class="hidden fixed inset-0 z-[9999] bg-black/95 backdrop-blur-sm flex flex-col items-center justify-center p-4 transition-opacity">
+        <p class="text-yellow-400 text-center font-bold mb-4 text-sm sm:text-base animate-bounce">
+            👇 Nhấn giữ vào ảnh bên dưới 2 giây <br> và chọn "Lưu hình ảnh" để tải về máy! 👇
+        </p>
+        
+        <img id="result-image" class="max-h-[70vh] max-w-full rounded-lg shadow-2xl border-2 border-yellow-500" src="" alt="Kết quả Game">
+        
+        <p class="text-gray-400 text-center text-xs mt-3 px-6">
+            (Nếu dùng máy tính, hãy Click chuột phải -> Save image as...)
+        </p>
+
+        <button id="close-modal-btn" class="mt-5 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-8 rounded-full shadow-lg transition-all">
+            Đóng
+        </button>
+    </div>
+
     <script>
-        // 1. CHỨC NĂNG CO GIÃN TỰ ĐỘNG
         function adjustScale() {
             const card = document.getElementById('game-card');
             const scale = Math.min(window.innerWidth / card.offsetWidth, window.innerHeight / card.offsetHeight, 1);
@@ -109,7 +123,6 @@
         window.addEventListener('resize', adjustScale);
         window.addEventListener('load', adjustScale);
 
-        // 2. LOGIC TRÒ CHƠI
         const inputs = document.querySelectorAll('.letter-box');
         const mssvInput = document.getElementById('mssv-input');
         const messageEle = document.getElementById('message');
@@ -118,6 +131,11 @@
         const mssvDisplay = document.getElementById('mssv-display');
         const titleEle = document.getElementById('title-ele');
         const titleContainer = document.getElementById('title-container');
+
+        // Các biến cho Modal
+        const resultModal = document.getElementById('result-modal');
+        const resultImage = document.getElementById('result-image');
+        const closeModalBtn = document.getElementById('close-modal-btn');
 
         function checkGame() {
             const currentWord = Array.from(inputs).map(i => i.value).join('');
@@ -176,74 +194,64 @@
             });
         });
 
-        // 3. CHỨC NĂNG CHỤP ẢNH (ĐÃ FIX LỖI ĐƠ MÁY VÀ LỖI FONT TIÊU ĐỀ)
+        // XỬ LÝ CHỤP VÀ HIỂN THỊ MODAL
         captureBtn.addEventListener('click', async () => {
-            // Đổi trạng thái nút
             captureBtn.innerText = '⏳ Đang xử lý...';
             captureBtn.style.pointerEvents = 'none';
             
             const card = document.getElementById('game-card');
             const originalTransform = card.style.transform;
             
-            // --- KỸ XẢO FIX FONT HTML2CANVAS ---
-            // Tạo một tiêu đề màu vàng tĩnh để chụp ảnh
             const staticTitle = document.createElement('h1');
             staticTitle.innerHTML = 'Di sản UNESCO<br>Việt Nam';
-            // Dùng class y hệt nhưng đổi màu gradient thành màu vàng tĩnh (text-yellow-300)
             staticTitle.className = "font-serif-custom text-3xl sm:text-4xl font-bold text-yellow-300 drop-shadow-md leading-snug";
             
-            // Ẩn tiêu đề cũ, hiện tiêu đề tĩnh
             titleEle.style.display = 'none';
             titleContainer.appendChild(staticTitle);
-            // ------------------------------------
 
-            // Trả scale về 1 để chụp nét và đúng vị trí
             card.style.transform = 'scale(1)';
             captureBtn.style.visibility = 'hidden';
             messageEle.style.visibility = 'hidden';
 
-            // Chờ giao diện render xong (300ms)
             await new Promise(r => setTimeout(r, 300));
 
             try {
-                // Tối ưu hóa: Giảm chất lượng (scale) trên điện thoại để không bị văng web
                 const isMobile = window.innerWidth < 768;
                 const canvas = await html2canvas(card, {
                     useCORS: true,
-                    scale: isMobile ? 1.5 : 2.5, 
+                    scale: isMobile ? 2 : 2.5, 
                     backgroundColor: '#1a1a1a',
                     logging: false
                 });
 
-                // Dùng toBlob thay vì toDataURL giúp điện thoại xử lý mượt hơn
-                canvas.toBlob((blob) => {
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `UNESCO_${mssvText.textContent || 'TrangAn'}.png`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(url);
-                }, 'image/png');
+                // Chuyển canvas thành dạng Data URL để nhúng vào thẻ <img>
+                const imageBase64 = canvas.toDataURL('image/png');
+                
+                // Gắn nguồn ảnh cho Modal và hiển thị Modal lên
+                resultImage.src = imageBase64;
+                resultModal.classList.remove('hidden');
 
             } catch (err) {
-                alert('Có lỗi xảy ra khi lưu ảnh. Vui lòng thử lại!');
+                alert('Có lỗi xảy ra khi xử lý ảnh. Vui lòng thử lại!');
                 console.error(err);
             } finally {
-                // KHÔI PHỤC GIAO DIỆN
-                staticTitle.remove(); // Xóa tiêu đề tĩnh
-                titleEle.style.display = 'block'; // Hiện lại tiêu đề gradient đẹp
+                staticTitle.remove(); 
+                titleEle.style.display = 'block'; 
                 
                 card.style.transform = originalTransform;
                 captureBtn.style.visibility = 'visible';
                 messageEle.style.visibility = 'visible';
-                captureBtn.innerText = '📸 Tải ảnh minh chứng';
+                captureBtn.innerText = '📸 Nhận ảnh minh chứng';
                 captureBtn.style.pointerEvents = 'auto';
             }
         });
 
-        // Chạy scale lần đầu khi mới load web
+        // Tắt Modal
+        closeModalBtn.addEventListener('click', () => {
+            resultModal.classList.add('hidden');
+            resultImage.src = ''; // Dọn dẹp bộ nhớ
+        });
+
         adjustScale();
     </script>
 </body>
